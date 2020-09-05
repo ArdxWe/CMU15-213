@@ -235,7 +235,18 @@ int negate(int x) {
  *   Rating: 3
  */
 int isAsciiDigit(int x) {
-  return 2;
+  /*
+  high 保证 3位以上正确
+  three 为 1 则 two 和 one 必须为 0
+  */
+
+  int high = !(~(((~0x3F) ^ x) | 0xF));
+
+  int three = x & 0x8;
+  int two = x & 0x4;
+  int one = x &0x2;
+
+  return high & ((!three) | ((!two) & (!one)));
 }
 /* 
  * conditional - same as x ? y : z 
