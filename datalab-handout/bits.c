@@ -143,7 +143,18 @@ NOTES:
  *   Rating: 1
  */
 int bitXor(int x, int y) {
-  return 2;
+  /*
+    allone 得到全为 1 的 bit
+    allzero 得到全为 0 的 bit
+    两者取反与则使得不同的 bits 为 1 相同为 0
+    达到取反的效果
+  */
+  int allone = x & y;
+  int allzero = (~x) & (~y);
+
+  int ans = (~allone) & (~allzero);
+  
+  return ans;
 }
 /* 
  * tmin - return minimum two's complement integer 
@@ -152,8 +163,12 @@ int bitXor(int x, int y) {
  *   Rating: 1
  */
 int tmin(void) {
+  /*
+  tmin 首位为 1 其余 bits 全 0
+  */
+  int ans = 1 << 31;
 
-  return 2;
+  return ans;
 
 }
 //2
@@ -165,7 +180,13 @@ int tmin(void) {
  *   Rating: 1
  */
 int isTmax(int x) {
-  return 2;
+  /*
+  x 是 111111 和 011111 时 a 是 0
+  x 是 111111 b 是 1
+  */
+  int a = !!(~((x + 1) ^ x));
+  int b = !(~x);
+  return !(a | b);
 }
 /* 
  * allOddBits - return 1 if all odd-numbered bits in word set to 1
