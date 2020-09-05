@@ -197,7 +197,19 @@ int isTmax(int x) {
  *   Rating: 2
  */
 int allOddBits(int x) {
-  return 2;
+  /*
+  与 0xAAAAAAAA 与看是否等于 0xAAAAAAAA
+  */
+  int a = 0xAA;
+  int b = a << 8;
+  int c = b << 8;
+  int d = c << 8;
+
+  int f = a | b | c | d;  // 0xAAAAAAAA
+
+  int ans = !(~((f & x) ^ (~f)));
+
+  return ans; 
 }
 /* 
  * negate - return -x 
