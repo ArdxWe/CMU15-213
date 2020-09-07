@@ -294,6 +294,11 @@ int isLessOrEqual(int x, int y) {
  *   Rating: 4 
  */
 int logicalNeg(int x) {
+  /*
+  倍数得到 x是否含有1
+  含有1 =====> all == 1
+  没有1 =====> all == 0
+  */
   int all;
 
   all = (x >> 0x10) | x;
