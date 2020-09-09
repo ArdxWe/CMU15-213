@@ -324,7 +324,46 @@ int logicalNeg(int x) {
  *  Rating: 4
  */
 int howManyBits(int x) {
-  return 0;
+
+  int thirtytwo = (x >> 31) & 1;
+  int thirtyone = ((x >> 30) & 1) ^ thirtytwo;
+  int thirty = (thirtytwo ^ ((x >> 29) & 1)) | thirtyone;
+  int twentynine = (thirtytwo ^ ((x >> 28) & 1)) | thirty;
+  int twentyeight = (thirtytwo ^((x >> 27) & 1)) | twentynine;
+  int twentyseven = (thirtytwo ^((x >> 26) & 1)) | twentyeight;
+  int twentysix = (thirtytwo ^((x >> 25) & 1)) | twentyseven;
+  int twentyfive = (thirtytwo ^((x >> 24) & 1)) | twentysix;
+  int twentyfour = (thirtytwo ^((x >> 23) & 1)) | twentyfive;
+  int twentythree = (thirtytwo ^((x >> 22) & 1)) | twentyfour;
+  int twentytwo = (thirtytwo ^((x >> 21) & 1)) | twentythree;
+  int twentyone = (thirtytwo ^((x >> 20) & 1)) | twentytwo;
+  int twenty = (thirtytwo ^((x >> 19) & 1)) | twentyone;
+  int onenine = (thirtytwo ^((x >> 18) & 1)) | twenty;
+  int oneeight = (thirtytwo ^((x >> 17) & 1)) | onenine;
+  int oneseven = (thirtytwo ^((x >> 16) & 1)) | oneeight;
+  int onesix = (thirtytwo ^((x >> 15) & 1)) | oneseven;
+  int onefive = (thirtytwo ^((x >> 14) & 1)) | onesix;
+  int onefour = (thirtytwo ^((x >> 13) & 1)) | onefive;
+  int onethree = (thirtytwo ^((x >> 12) & 1)) | onefour;
+  int onetwo = (thirtytwo ^((x >> 11) & 1)) | onethree;
+  int oneone = (thirtytwo ^((x >> 10) & 1)) | onetwo;
+  int ten = (thirtytwo ^((x >> 9) & 1)) | oneone;
+  int nine = (thirtytwo ^((x >> 8) & 1)) | ten;
+  int eight = (thirtytwo ^((x >> 7) & 1)) | nine;
+  int seven = (thirtytwo ^((x >> 6) & 1)) | eight;
+  int six = (thirtytwo ^((x >> 5) & 1)) | seven;
+  int five = (thirtytwo ^((x >> 4) & 1)) | six;
+  int four = (thirtytwo ^((x >> 3) & 1)) | five;
+  int three = (thirtytwo ^((x >> 2) & 1)) | four;
+  int two = (thirtytwo ^((x >> 1) & 1)) | three;
+  int one = (thirtytwo ^(x & 1)) | two;
+
+
+
+  return one + two + three + four + five + six + seven + eight + nine + ten
+         + oneone + onetwo + onethree + onefour + onefive + onesix + oneseven + oneeight + onenine
+         + twenty + twentyone + twentytwo + twentythree + twentyfour + twentyfive + twentysix + twentyseven + twentyeight + twentynine
+         + thirty + thirtyone + 1;
 }
 //float
 /* 
