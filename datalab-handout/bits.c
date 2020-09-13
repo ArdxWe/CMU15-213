@@ -379,7 +379,6 @@ int howManyBits(int x) {
  */
 unsigned floatScale2(unsigned uf) {
   unsigned one = 0x1 << 31;
-  unsigned none = ~(0x1 << 31);
 
   unsigned eight = 0xFF << 23;
   unsigned neight = ~(0xFF << 23);
@@ -387,21 +386,21 @@ unsigned floatScale2(unsigned uf) {
   unsigned twothree = 0xFF | (0xFF << 8) | (0x7F << 16);
   unsigned ntwothree = ~(0xFF | (0xFF << 8) | (0x7F << 16));
 
-  unsigned s = (one & uf) >> 31;
   unsigned e = (eight & uf) >> 23;
   unsigned m = twothree & uf;
 
   unsigned sign = uf | (~(1 << 31));
 
+  unsigned newtwothree = (m << 1) | ntwothree;
+  unsigned neweight = neight;
+
   if (e == 0){
     if (m == 0)return uf;
-    unsigned newtwothree = (m << 1) | ntwothree;
-    unsigned neweight = neight;
 
     if ((m & (1 << 22))) {
       neweight = (1 << 23) | one | twothree;
     }
-    return ((uf | eight & neweight) | twothree) & newtwothree;
+    return (((uf | eight) & neweight) | twothree) & newtwothree;
     
   }
 
@@ -413,7 +412,7 @@ unsigned floatScale2(unsigned uf) {
   else if (e == 0xFF) {
     return uf;
   }
-  
+
   else {
     return (uf | eight) & (((e + 1) << 23) | one | twothree);
   }
