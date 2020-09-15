@@ -430,7 +430,35 @@ unsigned floatScale2(unsigned uf) {
  *   Rating: 4
  */
 int floatFloat2Int(unsigned uf) {
-  return 2;
+  unsigned res = 0;
+  unsigned count = 0;
+  unsigned copycount = 0;
+  unsigned m = 0;
+  unsigned end = 0;
+  unsigned e = (uf >> 23) & 0xFF;
+  unsigned sign = (0x1 << 31) & uf; 
+
+  if (e < 127)return 0;
+  else if (e < 150) {
+    count = e - 127;
+    m = 1;
+    copycount = count;
+    while (copycount) {
+      m = m | (m << 1);
+      copycount--;
+    }
+    m = m >> 1;
+    end = 23 - count;
+    res = (m & (uf >> end)) | (1 << m);
+    m = m << 1;
+    if (sign) {
+      res = res | (~m);
+    }
+    return res;
+  }
+  else{
+    return 1 << 31;
+  }
 }
 /* 
  * floatPower2 - Return bit-level equivalent of the expression 2.0^x
