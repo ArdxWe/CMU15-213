@@ -474,5 +474,29 @@ int floatFloat2Int(unsigned uf) {
  *   Rating: 4
  */
 unsigned floatPower2(int x) {
-    return 2;
+  int e = 0;
+  int m = 0;
+  int leftcount = 0;
+  if (x < -149) return 0;
+
+  else if (x < -126) {
+    e = 0;
+
+    leftcount = x + 148;
+    m = 1;
+    while (leftcount) {
+      m = m << 1;
+      leftcount--;
+    }
+  }
+
+  else if (x < 128) {
+    e = x + 127;
+    m = 0;
+  }
+  else {
+    e = 0xFF;
+    m = 0;
+  }
+return e << 23 | m;
 }
