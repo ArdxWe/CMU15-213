@@ -13,8 +13,11 @@ void getaddrfromline(char* buff, char* result);
 long getlownnumber(long addr, long n);
 bool isequalbits();
 
-int main(long argc, char* argv[])
+int main(int argc, char* argv[])
 {
+    long hit_count = 0;
+    long eviction_count = 0;
+    long miss_count = 0;
     long tagbits = 0;
     long setsbits = 0;
     long linesperset = 0;
@@ -55,9 +58,10 @@ int main(long argc, char* argv[])
 
     }
 
-    tagbits = sizeof(long) - setsbits - blockbits;
+    tagbits = sizeof(long) * 8 - setsbits - blockbits;
 
     long count = pow(2, setsbits) * linesperset;
+    printf("count: %ld\n", count);
     long* tagptr = malloc(sizeof(long) * count);
     long* usedptr = malloc(sizeof(long) * count);
 
@@ -85,8 +89,7 @@ int main(long argc, char* argv[])
 
     char buff[1024];
     char number[1024];
-    unsigned long addr;
-    long n;
+    long addr;
 
     long set;
     long block;
@@ -95,13 +98,13 @@ int main(long argc, char* argv[])
 
     while (fgets(buff, 1024, fp) != NULL) {
         memset(number, 0, 1024);
-        if(*(buff+1) == 'L')continue;
+        if(*(buff) == 'I')continue;
 
         printf("line: %s", buff);
         getaddrfromline(buff, number);
         printf("stri: %s\n", number);
-        sscanf(number, "%x", (unsigned int*)&addr);
-        printf("addr: %x\n", (unsigned int)addr);
+        sscanf(number, "%lx", &addr);
+        printf("addr: %lx\n", addr);
 
         tag = getlownnumber(addr >> (blockbits + setsbits), tagbits);
         set = getlownnumber(addr >> blockbits, setsbits);
@@ -111,18 +114,29 @@ int main(long argc, char* argv[])
         printf("set: %lx\n", set);
         printf("block: %lx\n\n", block);
 
-        long* nowptr = usedptr + set * count;
+        long* nowptr = usedptr + set * linesperset;
 
         long* this = nowptr;
 
         bool allone = true;
         for (int i=0; i < linesperset; i++) {
             if (*this != 0) {
-                if (*(tagptr + set * count + i) == tag) {
-                    if (*(buff+1) == 'M') printf("hit hit");
-                    else printf("hit");
+                if (tag == 0x3ff8001b){
+                    printf("fcc\n");
+                    printf("%lx\n", *(tagptr + set * linesperset + i));
+                    printf("i: %d\n", i);
+                }
+                if (*(tagptr + set * linesperset + i) == tag) {
+                    printf("ccccc");
+                    if (*(buff+1) == 'M') {
+                        printf("hit hit\n");
+                        hit_count++;
+                        (*this)++;
+                    }
+                    else printf("hit\n");
                     (*this)++;
-                    break;
+                    hit_count++;
+                    goto ff;
                 }
             }
             else allone = false;
@@ -134,17 +148,23 @@ int main(long argc, char* argv[])
         if (allone == false) {
             this = nowptr;
             for (int i=0; i < linesperset; i++) {
-                if (this == 0)break;
+                if (*this == 0) {
+                    *(tagptr + set * linesperset+i) = tag;
+                    break;
+                }
                 this++;
             }
             *this = 1;
-            *(tagptr + set * count) = tag;
-            if (*(buff+1) == 'M') printf("miss hit");
-            else printf("miss");
+            if (*(buff+1) == 'M') {
+                printf("miss hit\n");
+                hit_count++;
+            }
+            else printf("miss\n");
+            miss_count++;
         }
 
         else {
-            long min = 0x8FFFFFFFFFFFFFFF;
+            long min = 0x7FFFFFFFFFFFFFFF;
             this = nowptr;
             for (int i=0; i < linesperset; i++) {
                 if (*this < min) {
@@ -153,13 +173,33 @@ int main(long argc, char* argv[])
                 }
                 this++;
             }
-            *(tagptr + set *count + index) = tag;
-            *this = 1;
-            if (*(buff+1) == 'M') printf("miss eviction hit");
-            else printf("miss eviction");
+            *(tagptr + set *linesperset + index) = tag;
+            *(nowptr + index) = 1;
+            if (*(buff+1) == 'M') {
+                printf("miss eviction hit\n");
+                hit_count++;
+            }
+            else printf("miss eviction\n");
+            miss_count++;
+            eviction_count++;
+        }
+        ff:printf("used :");
+        long* x = usedptr;
+        for (int i=0; i<count; i++){
+            printf("%lx ", *x);
+            x++;
+        }
+        printf("\ntags :");
+        x = tagptr;
+        for (int i=0; i<count; i++){
+            printf("%lx ", *x);
+            x++;
         }
     }
-    // prlongSummary(0, 0, 0);
+    printf("hit: %ld\n", hit_count);
+    printf("miss: %ld\n", miss_count);
+    printf("eviction: %ld\n", eviction_count);
+    // printSummary(hit_count, miss_count, eviction_count);
     return 0;
 }
 

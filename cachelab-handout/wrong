@@ -1,0 +1,74 @@
+count: 32
+s: 4
+E: 2
+b: 4
+filename: traces/yi.trace
+true/home/ardxwe/github/CS15-213labs/cachelab-handout/traces/yi.trace
+fuck
+
+line:  L 10,1
+stri: 10
+addr: 10
+tag: 0
+set: 1
+block: 0
+
+miss
+used :0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+tags :0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 line:  M 20,1
+stri: 20
+addr: 20
+tag: 0
+set: 2
+block: 0
+
+miss hit
+used :0 0 1 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+tags :0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 line:  L 22,1
+stri: 22
+addr: 22
+tag: 0
+set: 2
+block: 2
+
+ccccchit
+used :0 0 1 0 2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+tags :0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 line:  S 18,1
+stri: 18
+addr: 18
+tag: 0
+set: 1
+block: 8
+
+ccccchit
+used :0 0 2 0 2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+tags :0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 line:  L 110,1
+stri: 110
+addr: 110
+tag: 1
+set: 1
+block: 0
+
+miss
+used :0 0 2 1 2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+tags :0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 line:  L 210,1
+stri: 210
+addr: 210
+tag: 2
+set: 1
+block: 0
+
+miss eviction
+used :0 0 2 1 2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+tags :0 0 0 2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 line:  M 12,1
+stri: 12
+addr: 12
+tag: 0
+set: 1
+block: 2
+
+ccccchit hit
+used :0 0 4 1 2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+tags :0 0 0 2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 hit: 5
+miss: 4
+eviction: 1
