@@ -25,6 +25,7 @@ int main(int argc, char* argv[])
     char* filename = NULL;
     bool infoflag = false;
     FILE* fp = NULL;
+    long max = 1;
 
     for (long i=1; i<argc; i++){
         size_t size = strlen(argv[i]);
@@ -121,20 +122,13 @@ int main(int argc, char* argv[])
         bool allone = true;
         for (int i=0; i < linesperset; i++) {
             if (*this != 0) {
-                if (tag == 0x3ff8001b){
-                    printf("fcc\n");
-                    printf("%lx\n", *(tagptr + set * linesperset + i));
-                    printf("i: %d\n", i);
-                }
                 if (*(tagptr + set * linesperset + i) == tag) {
-                    printf("ccccc");
                     if (*(buff+1) == 'M') {
                         printf("hit hit\n");
                         hit_count++;
-                        (*this)++;
                     }
                     else printf("hit\n");
-                    (*this)++;
+                    (*this) = max++;
                     hit_count++;
                     goto ff;
                 }
@@ -154,10 +148,11 @@ int main(int argc, char* argv[])
                 }
                 this++;
             }
-            *this = 1;
+            *this = max++;
             if (*(buff+1) == 'M') {
                 printf("miss hit\n");
                 hit_count++;
+                *this = max++;
             }
             else printf("miss\n");
             miss_count++;
@@ -167,14 +162,14 @@ int main(int argc, char* argv[])
             long min = 0x7FFFFFFFFFFFFFFF;
             this = nowptr;
             for (int i=0; i < linesperset; i++) {
-                if (*this < min) {
+                if (*this != 0 && ((*this) < min)) {
                     min = *this;
                     index = i;
                 }
                 this++;
             }
             *(tagptr + set *linesperset + index) = tag;
-            *(nowptr + index) = 1;
+            *(nowptr + index) = max++;
             if (*(buff+1) == 'M') {
                 printf("miss eviction hit\n");
                 hit_count++;
@@ -199,7 +194,7 @@ int main(int argc, char* argv[])
     printf("hit: %ld\n", hit_count);
     printf("miss: %ld\n", miss_count);
     printf("eviction: %ld\n", eviction_count);
-    // printSummary(hit_count, miss_count, eviction_count);
+    printSummary(hit_count, miss_count, eviction_count);
     return 0;
 }
 
