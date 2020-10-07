@@ -11,10 +11,8 @@
 #include "cachelab.h"
 #include "assert.h"
 
-long getlowbits(long number, long n);
 void getaddrfromline(char* buff, char* result);
 long getlownnumber(long addr, long n);
-bool isequalbits();
 
 int main(int argc, char* argv[])
 {
