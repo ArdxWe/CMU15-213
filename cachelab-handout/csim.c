@@ -5,6 +5,9 @@
 #include <math.h>
 #include <unistd.h>
 
+#define NDEBUG
+#define print(x) if (infoflag) printf(x)
+
 #include "cachelab.h"
 #include "assert.h"
 
@@ -15,21 +18,33 @@ bool isequalbits();
 
 int main(int argc, char* argv[])
 {
+    // 记录次数
     long hit_count = 0;
     long eviction_count = 0;
     long miss_count = 0;
+
+    // 缓存相关数据
     long tagbits = 0;
     long setsbits = 0;
     long linesperset = 0;
     long blockbits = 0;
+
+    // 文件名
     char* filename = NULL;
+
+    // 是否输出具体信息
     bool infoflag = false;
+
+    // 文件
     FILE* fp = NULL;
+
+    // 实现 LRU 变量
     long max = 1;
 
+    // 解析命令行参数
     for (long i=1; i<argc; i++){
-        size_t size = strlen(argv[i]);
-        assert(size == 2);
+        size_t length = strlen(argv[i]);
+        assert(length == 2);
         switch (argv[i][1])
         {
         case 'v':
@@ -53,81 +68,82 @@ int main(int argc, char* argv[])
             break;
 
         default:
-            printf("Parameter error, you should use -v -s -E -b -t");
+            fprintf(stderr, "Parameter error, you should use -v -s number -E number -b number -t filename");
             return -1;
         }
 
     }
 
-    tagbits = sizeof(long) * 8 - setsbits - blockbits;
+    // 地址剩余位数应该为 tag 的位数
+    tagbits = sizeof(void*) * 8 - setsbits - blockbits;
 
-    long count = pow(2, setsbits) * linesperset;
-    printf("count: %ld\n", count);
-    long* tagptr = malloc(sizeof(long) * count);
-    long* usedptr = malloc(sizeof(long) * count);
+    assert(tagbits > 0);
+
+    // cache块数
+    long count = (1 << setsbits) * linesperset;
+
+    // tag 和 used 用来模拟 cache
+    // calloc: malloc and memset 0
+    long* tagptr = calloc(count, sizeof(long));
+    long* usedptr = calloc(count, sizeof(long));
 
     if (usedptr == NULL || tagptr == NULL){
-        printf("malloc error.");
+        fprintf(stderr, "calloc error.");
         return -1;
     }
 
-    memset(tagptr, 0, sizeof(long) * count);
-    memset(usedptr, 0, sizeof(long) * count);
-
-    printf("s: %ld\n", setsbits);
-    printf("E: %ld\n", linesperset);
-    printf("b: %ld\n", blockbits);
-    printf("filename: %s\n", filename);
-    printf(infoflag ? "true" : "false");
-
-    char file[1024];
-    strcpy(file, getcwd(NULL, 0));
-    strcat(file, "/");
-    strcat(file, filename);
-    puts(file);
-
-    fp = fopen(file, "r");
+    fp = fopen(filename, "r");
 
     char buff[1024];
     char number[1024];
     long addr;
 
     long set;
-    long block;
     long tag;
-    puts("fuck\n");
 
     while (fgets(buff, 1024, fp) != NULL) {
         memset(number, 0, 1024);
+
+        // 忽略 I 开头的行
         if(*(buff) == 'I')continue;
 
-        printf("line: %s", buff);
-        getaddrfromline(buff, number);
-        printf("stri: %s\n", number);
-        sscanf(number, "%lx", &addr);
-        printf("addr: %lx\n", addr);
+        // 去掉行尾回车
+        if(buff[strlen(buff)-1] == '\n')buff[strlen(buff)-1] = '\0';
 
+        // 去掉行头空格
+        if(infoflag && buff[0] == ' ') {
+            printf("%s ", buff + 1);
+        }
+        else if (infoflag) {
+            printf("%s ", buff);
+        }
+
+        // 得到地址 存于 number
+        getaddrfromline(buff, number);
+        sscanf(number, "%lx", &addr);
+
+        // 得到地址对应的 tag set
         tag = getlownnumber(addr >> (blockbits + setsbits), tagbits);
         set = getlownnumber(addr >> blockbits, setsbits);
-        block = getlownnumber(addr, blockbits);
 
-        printf("tag: %lx\n", tag);
-        printf("set: %lx\n", set);
-        printf("block: %lx\n\n", block);
-
+        // cache 行
         long* nowptr = usedptr + set * linesperset;
 
         long* this = nowptr;
 
         bool allone = true;
+        
+        // 试图找到 tag
         for (int i=0; i < linesperset; i++) {
             if (*this != 0) {
                 if (*(tagptr + set * linesperset + i) == tag) {
                     if (*(buff+1) == 'M') {
-                        printf("hit hit\n");
+                        print("hit hit\n");
                         hit_count++;
                     }
-                    else printf("hit\n");
+                    else {
+                        print("hit\n");
+                    }
                     (*this) = max++;
                     hit_count++;
                     goto ff;
@@ -139,6 +155,7 @@ int main(int argc, char* argv[])
 
         long index = 0;
 
+        // 有空余块
         if (allone == false) {
             this = nowptr;
             for (int i=0; i < linesperset; i++) {
@@ -150,14 +167,17 @@ int main(int argc, char* argv[])
             }
             *this = max++;
             if (*(buff+1) == 'M') {
-                printf("miss hit\n");
+                print("miss hit\n");
                 hit_count++;
                 *this = max++;
             }
-            else printf("miss\n");
+            else {
+                print("miss\n");
+            }
             miss_count++;
         }
 
+        // 驱逐
         else {
             long min = 0x7FFFFFFFFFFFFFFF;
             this = nowptr;
@@ -171,30 +191,25 @@ int main(int argc, char* argv[])
             *(tagptr + set *linesperset + index) = tag;
             *(nowptr + index) = max++;
             if (*(buff+1) == 'M') {
-                printf("miss eviction hit\n");
+                print("miss eviction hit\n");
                 hit_count++;
             }
-            else printf("miss eviction\n");
+            else {
+                print("miss eviction\n");
+            }
             miss_count++;
             eviction_count++;
         }
-        ff:printf("used :");
-        long* x = usedptr;
-        for (int i=0; i<count; i++){
-            printf("%lx ", *x);
-            x++;
-        }
-        printf("\ntags :");
-        x = tagptr;
-        for (int i=0; i<count; i++){
-            printf("%lx ", *x);
-            x++;
-        }
+        ff:;
     }
-    printf("hit: %ld\n", hit_count);
-    printf("miss: %ld\n", miss_count);
+
+    printf("hit: %ld ", hit_count);
+    printf("miss: %ld ", miss_count);
     printf("eviction: %ld\n", eviction_count);
     printSummary(hit_count, miss_count, eviction_count);
+    free(tagptr);
+    free(usedptr);
+    fclose(fp);
     return 0;
 }
 
@@ -216,6 +231,6 @@ void getaddrfromline(char* buff, char* result) {
 
 long getlownnumber(long addr, long n) {
     long x = 1;
-    for (long i=1; i<n; i++)x =x | (x << 1);
+    for (long i=1; i<n; i++) x = x | (x << 1);
     return x & addr;
 }
