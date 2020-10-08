@@ -8,6 +8,7 @@
  * on a 1KB direct mapped cache with a block size of 32 bytes.
  */ 
 #include <stdio.h>
+#include <stdbool.h>
 #include "cachelab.h"
 
 int is_transpose(int M, int N, int A[N][M], int B[M][N]);
@@ -22,6 +23,31 @@ int is_transpose(int M, int N, int A[N][M], int B[M][N]);
 char transpose_submit_desc[] = "Transpose submission";
 void transpose_submit(int M, int N, int A[N][M], int B[M][N])
 {
+    int a0, a1, a2, a3, a4, a5, a6, a7;
+    if(M == 32){
+        for (int i = 0; i < 32; i += 8) {
+            for (int j = 0; j < 32; j += 8) {
+                for (int k = i; k < i + 8; k++) {
+                    a0 = A[k][j];
+                    a1 = A[k][j + 1];
+                    a2 = A[k][j + 2];
+                    a3 = A[k][j + 3];
+                    a4 = A[k][j + 4];
+                    a5 = A[k][j + 5];
+                    a6 = A[k][j + 6];
+                    a7 = A[k][j + 7];
+                    B[j][k] = a0;
+                    B[j + 1][k] = a1;
+                    B[j + 2][k] = a2;
+                    B[j + 3][k] = a3;
+                    B[j + 4][k] = a4;
+                    B[j + 5][k] = a5;
+                    B[j + 6][k] = a6;
+                    B[j + 7][k] = a7;
+                }
+            }
+        }
+    }
 }
 
 /* 
@@ -59,7 +85,7 @@ void registerFunctions()
     registerTransFunction(transpose_submit, transpose_submit_desc); 
 
     /* Register any additional transpose functions */
-    registerTransFunction(trans, trans_desc); 
+    // registerTransFunction(trans, trans_desc); 
 
 }
 

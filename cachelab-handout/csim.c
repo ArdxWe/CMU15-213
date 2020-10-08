@@ -5,7 +5,7 @@
 #include <math.h>
 #include <unistd.h>
 
-#define NDEBUG
+// #define NDEBUG
 #define print(x) if (infoflag) printf(x)
 
 #include "cachelab.h"
