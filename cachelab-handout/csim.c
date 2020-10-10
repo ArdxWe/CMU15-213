@@ -136,11 +136,11 @@ int main(int argc, char* argv[])
             if (*this != 0) {
                 if (*(tagptr + set * linesperset + i) == tag) {
                     if (*(buff+1) == 'M') {
-                        print("hit hit\n");
+                        print("hit hit \n");
                         hit_count++;
                     }
                     else {
-                        print("hit\n");
+                        print("hit \n");
                     }
                     (*this) = max++;
                     hit_count++;
@@ -165,12 +165,12 @@ int main(int argc, char* argv[])
             }
             *this = max++;
             if (*(buff+1) == 'M') {
-                print("miss hit\n");
+                print("miss hit \n");
                 hit_count++;
                 *this = max++;
             }
             else {
-                print("miss\n");
+                print("miss \n");
             }
             miss_count++;
         }
@@ -189,11 +189,11 @@ int main(int argc, char* argv[])
             *(tagptr + set *linesperset + index) = tag;
             *(nowptr + index) = max++;
             if (*(buff+1) == 'M') {
-                print("miss eviction hit\n");
+                print("miss eviction hit \n");
                 hit_count++;
             }
             else {
-                print("miss eviction\n");
+                print("miss eviction \n");
             }
             miss_count++;
             eviction_count++;
@@ -201,10 +201,10 @@ int main(int argc, char* argv[])
         ff:;
     }
 
-    printf("hit: %ld ", hit_count);
-    printf("miss: %ld ", miss_count);
-    printf("eviction: %ld\n", eviction_count);
-    printSummary(hit_count, miss_count, eviction_count);
+    printf("hits:%ld ", hit_count);
+    printf("misses:%ld ", miss_count);
+    printf("evictions:%ld\n", eviction_count);
+    // printSummary(hit_count, miss_count, eviction_count);
     free(tagptr);
     free(usedptr);
     fclose(fp);
