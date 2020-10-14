@@ -204,7 +204,7 @@ int main(int argc, char* argv[])
     printf("hits:%ld ", hit_count);
     printf("misses:%ld ", miss_count);
     printf("evictions:%ld\n", eviction_count);
-    // printSummary(hit_count, miss_count, eviction_count);
+    printSummary(hit_count, miss_count, eviction_count);
     free(tagptr);
     free(usedptr);
     fclose(fp);
