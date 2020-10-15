@@ -210,7 +210,6 @@ void eval(char *cmdline)
     }
     else if (pid == 0){
         setpgid(0, 0);
-        printf("[DEBUG] child %d pgid %d\n", getpid(), getpgid(0));
         sigprocmask(SIG_SETMASK, &prev, NULL);
         fflush(stdout);
         execvp(argv[0], argv);
@@ -232,15 +231,8 @@ void eval(char *cmdline)
         else {
             sigprocmask(SIG_BLOCK, &all, NULL);
             ccount++;
-            struct job_t* currentjob =  getjobpid(jobs, pid);
-            fprintf(stdout, "[foreground]: [%d] (%d) %s", currentjob->jid, pid, cmdline);
             sigprocmask(SIG_SETMASK, &prev, NULL);
-            fflush(stdout);
-            printf("rfv\n");
-            fflush(stdout);
-            // sigaddset(&prev, SIGINT);
             sigsuspend(&prev);
-            printf("ffffffffffffffffffff\n");
             fflush(stdout);
             sigprocmask(SIG_SETMASK, &prev, NULL);
         }
@@ -390,17 +382,12 @@ void waitfg(pid_t pid)
  */
 void sigchld_handler(int sig) 
 {
-    printf("asd\n");
     int olderrno = errno, status;
     pid_t pid;
     while((pid = wait(&status)) > 0){
         ccount--;
         struct job_t* job = getjobpid(jobs, pid);
-        if (WIFSIGNALED(status)){
-            printf("Job [%d] (%d) terminated by signal %d", job->jid, job->pid, status);
-        }
-
-        printf("[DEBUG]end child %d\n", pid);
+        job->state = UNDEF;
     }
     errno = olderrno;
     return;
@@ -413,17 +400,15 @@ void sigchld_handler(int sig)
  */
 void sigint_handler(int sig) 
 {
-    if(pid2jid(getpid())){
-        printf("nowpid%d\n", getpid());
-        fflush(stdout);
-        exit(0);
-    }
-    pid_t pid = fgpid(jobs);
-    printf("ppppppppppppppid:%d\n", getpid());
     fflush(stdout);
-    printf("childdddddddd:%d\n", pid);
+
+    pid_t pid = fgpid(jobs);
+    fflush(stdout);
     fflush(stdout);
     kill(pid, SIGINT);
+    printf("Job [%d] (%d) terminated by signal %d\n", pid2jid(pid), pid, SIGINT);
+    struct job_t* job = getjobpid(jobs, pid);
+    job->state = UNDEF;
     return;
 }
 
