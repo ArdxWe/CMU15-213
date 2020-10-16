@@ -43,7 +43,6 @@ char prompt[] = "tsh> ";    /* command line prompt (DO NOT CHANGE) */
 int verbose = 0;            /* if true, print additional output */
 int nextjid = 1;            /* next job ID to allocate */
 char sbuf[MAXLINE];         /* for composing sprintf messages */
-int ccount = 0;
 
 struct job_t {              /* The job struct */
     pid_t pid;              /* job PID */
@@ -96,7 +95,7 @@ int main(int argc, char **argv)
 {
     char c;
     char cmdline[MAXLINE];
-    int emit_prompt = 0; /* emit prompt (default) */
+    int emit_prompt = 1; /* emit prompt (default) */
 
     /* Redirect stderr to stdout (so that driver will get all output
      * on the pipe connected to stdout) */
@@ -171,39 +170,22 @@ int main(int argc, char **argv)
 */
 void eval(char *cmdline) 
 {
-    sigset_t mask, prev, all;
+    sigset_t prev, all;
 
     pid_t pid;
     char* argv[MAXARGS];
     bool runbg = parseline(cmdline, argv);
 
-    sigemptyset(&mask);
-    sigaddset(&mask, SIGCHLD);
+    sigemptyset(&prev);
 
     sigfillset(&all);
+    sigprocmask(SIG_BLOCK, &all, NULL);
 
-    sigprocmask(SIG_BLOCK, &all, &prev);
-
+    fflush(stdout);
     if (builtin_cmd(argv)){
         sigprocmask(SIG_SETMASK, &prev, NULL);
         return;
     }
-    sigprocmask(SIG_SETMASK, &prev, NULL);
-#if 0
-    for (int i=0; ; i++){
-        if (argv[i] != NULL){
-            printf("%s\n", argv[i]);
-            fflush(stdout);
-        }
-        else{
-            break;
-        }
-    }
-#endif
-
-
-    sigprocmask(SIG_BLOCK, &mask, &prev);
-
 
     if ((pid = fork()) < 0){
         unix_error("fork error");
@@ -211,13 +193,13 @@ void eval(char *cmdline)
     else if (pid == 0){
         setpgid(0, 0);
         sigprocmask(SIG_SETMASK, &prev, NULL);
-        fflush(stdout);
         execvp(argv[0], argv);
     }
     else {
+        sigprocmask(SIG_SETMASK, &prev, NULL);
+
         sigprocmask(SIG_BLOCK, &all, NULL);
-        int a = runbg ? BG : FG;
-        addjob(jobs, pid, a, cmdline);
+        addjob(jobs, pid, runbg ? BG : FG, cmdline);
         sigprocmask(SIG_SETMASK, &prev, NULL);
         
         if(runbg){
@@ -229,12 +211,13 @@ void eval(char *cmdline)
         }
 
         else {
-            sigprocmask(SIG_BLOCK, &all, NULL);
-            ccount++;
-            sigprocmask(SIG_SETMASK, &prev, NULL);
             sigsuspend(&prev);
-            fflush(stdout);
-            sigprocmask(SIG_SETMASK, &prev, NULL);
+            if (sigismember(&prev, SIGINT)){
+                printf("int\n");
+            }
+            if (sigismember(&prev, SIGCHLD)){
+                printf("child\n");
+            }
         }
     }
 
@@ -307,13 +290,13 @@ int builtin_cmd(char **argv)
     if (strcmp(argv[0], "quit") == 0){
         exit(0);
     }
-    else if(strcmp(argv[0], "jobs") == 0){
+    else if (strcmp(argv[0], "jobs") == 0){
         showbgjobs(jobs, argv+1);
     }
-    else if(strcmp(argv[0], "bg") == 0 || strcmp(argv[0], "fg") == 0){
+    else if (strcmp(argv[0], "bg") == 0 || strcmp(argv[0], "fg") == 0){
         do_bgfg(argv);
     }
-    else{
+    else {
         return 0;     /* not a builtin command */
     }
     return 1;
@@ -331,7 +314,7 @@ void showbgjobs(struct job_t *jobs, char** argv){
                 fprintf(fp, "Running ");
                 fprintf(fp, "%s", jobs[i].cmdline);
             }
-            else{
+            else {
                 printf("[%d] (%d) ", jobs[i].jid, jobs[i].pid);
                 printf("Running ");
                 printf("%s", jobs[i].cmdline);
@@ -354,7 +337,7 @@ void do_bgfg(char **argv)
     if (strcmp(argv[0], "bg")){
         currentjob->state = BG;
     }
-    else{
+    else {
         currentjob->state = FG;
     }
 
@@ -384,8 +367,8 @@ void sigchld_handler(int sig)
 {
     int olderrno = errno, status;
     pid_t pid;
-    while((pid = wait(&status)) > 0){
-        ccount--;
+
+    if ((pid = wait(&status)) > 0){
         struct job_t* job = getjobpid(jobs, pid);
         job->state = UNDEF;
     }
