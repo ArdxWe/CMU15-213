@@ -20,7 +20,7 @@
 #define MAXARGS     128   /* max args on a command line */
 #define MAXJOBS      16   /* max jobs at any point in time */
 #define MAXJID    1<<16   /* max job ID */
-
+#define DEBUG
 /* Job states */
 #define UNDEF 0 /* undefined */
 #define FG 1    /* running in foreground */
@@ -42,7 +42,7 @@
 extern char **environ;      /* defined in libc */
 char prompt[] = "tsh> ";    /* command line prompt (DO NOT CHANGE) */
 int verbose = 1;            /* if true, print additional output */
-int nextjid = 1;            /* next job ID to allocate */
+int nextjid = 1;            /* next job ID to maskocate */
 char sbuf[MAXLINE];         /* for composing sprintf messages */
 volatile int count = 0;
 
@@ -55,6 +55,8 @@ struct job_t {              /* The job struct */
 struct job_t jobs[MAXJOBS]; /* The job list */
 /* End global variables */
 sigset_t mask, prev;
+bool runbg;
+bool fgcmd = false;
 
 /* Function prototypes */
 
@@ -90,6 +92,7 @@ void app_error(char *msg);
 typedef void handler_t(int);
 handler_t *Signal(int signum, handler_t *handler);
 
+void printsigset(const sigset_t*);
 /*
  * main - The shell's main routine 
  */
@@ -99,7 +102,7 @@ int main(int argc, char **argv)
     char cmdline[MAXLINE];
     int emit_prompt = 1; /* emit prompt (default) */
 
-    /* Redirect stderr to stdout (so that driver will get all output
+    /* Redirect stderr to stdout (so that driver will get mask output
      * on the pipe connected to stdout) */
     dup2(1, 2);
 
@@ -120,7 +123,7 @@ int main(int argc, char **argv)
 	}
     }
 
-    /* Install the signal handlers */
+    /* Instmask the signal handlers */
 
     /* These are the ones you will need to implement */
     Signal(SIGINT,  sigint_handler);   /* ctrl-c */
@@ -172,17 +175,32 @@ int main(int argc, char **argv)
 */
 void eval(char *cmdline) 
 {
+#ifdef DEBUG
+    printf("cmdline       :   %s", cmdline);
+    fflush(stdout);
+#endif
     pid_t pid;
     char* argv[MAXARGS];
-    bool runbg = parseline(cmdline, argv);
-
+    runbg = parseline(cmdline, argv);
     sigemptyset(&mask);
+    // sigfillset(&mask);
 
     sigaddset(&mask, SIGCHLD);
     sigaddset(&mask, SIGINT);
-    sigaddset(&mask,SIGSTOP);
+    sigaddset(&mask,SIGTSTP);
+#ifdef DEBUG
+
+    printf("first mask    :   ");
+    fflush(stdout);
+    printsigset(&mask);
+#endif
 
     sigprocmask(SIG_BLOCK, &mask, &prev);
+#ifdef DEBUG
+    printf("prev          :   ");
+    fflush(stdout);
+    printsigset(&prev);
+#endif
 
     if (builtin_cmd(argv)){
         sigprocmask(SIG_SETMASK, &prev, NULL);
@@ -193,17 +211,33 @@ void eval(char *cmdline)
         unix_error("fork error");
     }
     else if (pid == 0){
+        // child process
         setpgid(0, 0);
         sigprocmask(SIG_SETMASK, &prev, NULL);
-        
+        # if 1
         Signal(SIGINT, SIG_DFL);
         Signal(SIGTSTP, SIG_DFL);
         Signal(SIGCHLD, SIG_DFL);
         Signal(SIGQUIT, SIG_DFL);
+        # endif
+#ifdef DEBUG
+        printf("\n");
+        fflush(stdout);
+        printf("child process\npid: (%d)", getpid());
+        fflush(stdout);
+        printf("cmdline: %s", cmdline);
+        fflush(stdout);
+#endif
 
         execvp(argv[0], argv);
     }
     else {
+#ifdef DEBUG
+        printf("\n");
+        fflush(stdout);
+        printf("father process\npid: (%d)\n", getpid());
+        fflush(stdout);
+#endif
         sigprocmask(SIG_SETMASK, &prev, NULL);
 
         sigprocmask(SIG_BLOCK, &mask, &prev);
@@ -211,6 +245,7 @@ void eval(char *cmdline)
         sigprocmask(SIG_SETMASK, &prev, NULL);
         
         if(runbg){
+            fflush(stdout);
             sigprocmask(SIG_BLOCK, &mask, &prev);
             struct job_t* currentjob =  getjobpid(jobs, pid);
             fprintf(stdout, "[%d] (%d) %s", currentjob->jid, pid, cmdline);
@@ -221,12 +256,26 @@ void eval(char *cmdline)
         else {
             sigset_t childset, emptyset;
             sigemptyset(&childset);
-            sigemptyset(&emptyset);
+            sigfillset(&emptyset);
 
             sigaddset(&childset, SIGCHLD);
+            sigaddset(&childset, SIGTSTP);
+            sigdelset(&emptyset, SIGCHLD);
+            sigdelset(&emptyset, SIGTSTP);
 
-            sigprocmask(SIG_BLOCK, &childset, NULL);
+            sigprocmask(SIG_BLOCK, &childset, &prev);
+#ifdef DEBUG
+
+            fflush(stdout);
+            printf("before suspend:   ");
+            fflush(stdout);
+            printsigset(&childset);
+            fflush(stdout);
+#endif
+
             sigsuspend(&emptyset);
+
+            fflush(stdout);
             sigprocmask(SIG_SETMASK, &prev, NULL);
         }
     }
@@ -301,12 +350,16 @@ int builtin_cmd(char **argv)
         exit(0);
     }
     else if (strcmp(argv[0], "jobs") == 0){
-        sigprocmask(SIG_BLOCK, &mask, &prev);
+#ifdef DEBUG
+        printf("start jobs\n");
+        fflush(stdout);
+#endif
+        sigprocmask(SIG_BLOCK, &mask, NULL);
         showbgjobs(jobs, argv+1);
         sigprocmask(SIG_SETMASK, &prev, NULL);
     }
     else if (strcmp(argv[0], "bg") == 0 || strcmp(argv[0], "fg") == 0){
-        sigprocmask(SIG_BLOCK, &mask, &prev);
+        sigprocmask(SIG_BLOCK, &mask, NULL);
         do_bgfg(argv);
         sigprocmask(SIG_SETMASK, &prev, NULL);
     }
@@ -361,16 +414,17 @@ void do_bgfg(char **argv)
     }
     if (strcmp(argv[0], "bg") == 0){
         currentjob->state = BG;
-        kill(currentjob->pid, SIGCONT);
+        printf("[%d] (%d) %s", currentjob->jid, currentjob->pid, currentjob->cmdline);
+        fflush(stdout);
+        kill(-(currentjob->pid), SIGCONT);
     }
     else {
+        printf("fuckyou [%d]\n", currentjob->pid);
+        fflush(stdout);
         currentjob->state = FG;
-        kill(currentjob->pid, SIGCONT);
+        kill(-(currentjob->pid), SIGCONT);
+        waitfg(currentjob->pid);
     }
-    printf("[%d] (%d) %s", currentjob->jid, currentjob->pid, currentjob->cmdline);
-    fflush(stdout);
-    
-
     return;
 }
 
@@ -379,6 +433,25 @@ void do_bgfg(char **argv)
  */
 void waitfg(pid_t pid)
 {
+    sigset_t childset, emptyset;
+    sigemptyset(&childset);
+    sigfillset(&emptyset);
+
+    sigaddset(&childset, SIGCHLD);
+    sigaddset(&childset, SIGTSTP);
+    sigdelset(&emptyset, SIGCHLD);
+    sigdelset(&emptyset, SIGTSTP);
+
+    sigprocmask(SIG_BLOCK, &childset, NULL);
+    printf("fg suspend before\n");
+    fflush(stdout);
+    printsigset(&emptyset);
+    fflush(stdout);
+    sigsuspend(&emptyset);
+    printf("fg suspend\n");
+    fflush(stdout);
+    fflush(stdout);
+    sigprocmask(SIG_SETMASK, &prev, NULL);
     return;
 }
 
@@ -389,7 +462,7 @@ void waitfg(pid_t pid)
 /* 
  * sigchld_handler - The kernel sends a SIGCHLD to the shell whenever
  *     a child job terminates (becomes a zombie), or stops because it
- *     received a SIGSTOP or SIGTSTP signal. The handler reaps all
+ *     received a SIGSTOP or SIGTSTP signal. The handler reaps mask
  *     available zombie children, but doesn't wait for any other
  *     currently running children to terminate.  
  */
@@ -398,12 +471,14 @@ void sigchld_handler(int sig)
     int olderrno = errno, status;
     pid_t pid;
 
-    while ((pid = waitpid(-1, &status, WNOHANG| WUNTRACED)) > 0){
-        sigprocmask(SIG_BLOCK, &mask, &prev);
+    while ((pid = waitpid(-1, &status, WNOHANG | WUNTRACED)) > 0){
+        sigprocmask(SIG_BLOCK, &mask, NULL);
+
         if (WIFSTOPPED(status));
         else {
             deletejob(jobs, pid);
         }
+        // printf("childhandle pid: %d\n", pid);
         sigprocmask(SIG_SETMASK, &prev, NULL);
     }
     fflush(stdout);
@@ -419,7 +494,7 @@ void sigchld_handler(int sig)
 void sigint_handler(int sig) 
 {
     fflush(stdout);
-    sigprocmask(SIG_BLOCK, &mask, &prev);
+    sigprocmask(SIG_BLOCK, &mask, NULL);
     pid_t pid = fgpid(jobs);
     sigprocmask(SIG_SETMASK, &prev, NULL);
 
@@ -441,21 +516,18 @@ void sigint_handler(int sig)
  */
 void sigtstp_handler(int sig) 
 {
+    printf("sigstophandle\n");
+    fflush(stdout);
     // listjobs(jobs);
-    sigprocmask(SIG_BLOCK, &mask, &prev);
+    sigprocmask(SIG_BLOCK, &mask, NULL);
     pid_t pid = fgpid(jobs);
     struct job_t* job = getjobpid(jobs, pid);
     if (job) {
         job->state = ST;
-        listjobs(jobs);
         fflush(stdout);
         kill(-pid, SIGTSTP);
+        printf("Job [%d] (%d) stoped by signal %d\n", pid2jid(pid), pid, SIGTSTP);
     }
-    else{
-        // listjobs(jobs);
-    }
-    // listjobs(jobs);
-    printf("Job [%d] (%d) stoped by signal %d\n", pid2jid(pid), pid, SIGTSTP);
     sigprocmask(SIG_SETMASK, &prev, NULL);
     fflush(stdout);
     return;
@@ -485,7 +557,7 @@ void initjobs(struct job_t *jobs) {
 	clearjob(&jobs[i]);
 }
 
-/* maxjid - Returns largest allocated job ID */
+/* maxjid - Returns largest maskocated job ID */
 int maxjid(struct job_t *jobs) 
 {
     int i, max=0;
@@ -664,7 +736,7 @@ handler_t *Signal(int signum, handler_t *handler)
 
     action.sa_handler = handler;  
     sigemptyset(&action.sa_mask); /* block sigs of type being handled */
-    action.sa_flags = SA_RESTART; /* restart syscalls if possible */
+    action.sa_flags = SA_RESTART; /* restart syscmasks if possible */
 
     if (sigaction(signum, &action, &old_action) < 0)
 	unix_error("Signal error");
@@ -679,6 +751,22 @@ void sigquit_handler(int sig)
 {
     printf("Terminating after receipt of SIGQUIT signal\n");
     exit(1);
+}
+
+void printsigset(const sigset_t *pset)
+{
+    int i = 0;
+    //遍历64个信号，
+    for (; i < 64; i++)
+    {
+        //信号从1开始   判断哪些信号在信号未决状态字中
+        if (sigismember(pset, i + 1))
+            putchar('1');
+        else
+            putchar('0');
+        fflush(stdout);
+    }
+    printf("\n");
 }
 
 
