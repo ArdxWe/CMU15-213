@@ -228,14 +228,13 @@ void eval(char *cmdline)
         printf("cmdline: %s", cmdline);
         fflush(stdout);
 #endif
-
         execvp(argv[0], argv);
     }
     else {
 #ifdef DEBUG
         printf("\n");
         fflush(stdout);
-        printf("father process\npid: (%d)\n", getpid());
+        printf("father process pid: (%d)\n", getpid());
         fflush(stdout);
 #endif
         sigprocmask(SIG_SETMASK, &prev, NULL);
@@ -245,12 +244,13 @@ void eval(char *cmdline)
         sigprocmask(SIG_SETMASK, &prev, NULL);
         
         if(runbg){
+            printf("runbgggggg\n");
             fflush(stdout);
             sigprocmask(SIG_BLOCK, &mask, &prev);
             struct job_t* currentjob =  getjobpid(jobs, pid);
             fprintf(stdout, "[%d] (%d) %s", currentjob->jid, pid, cmdline);
-            sigprocmask(SIG_SETMASK, &prev, NULL);
             fflush(stdout);
+            sigprocmask(SIG_SETMASK, &prev, NULL);
         }
 
         else {
@@ -408,9 +408,34 @@ void showbgjobs(struct job_t *jobs, char** argv){
  */
 void do_bgfg(char **argv) 
 {
-    struct job_t* currentjob = getjobpid(jobs, (pid_t)atoi(argv[1] + 1));
-    if (currentjob == NULL){
-        currentjob = getjobjid(jobs, atoi(argv[1] + 1));
+    struct job_t* currentjob;
+    if (argv[1] == NULL){
+        printf("%s command requeires PID or %%jobid argument\n", argv[0]);
+        fflush(stdout);
+        return;
+    }
+    else if ((argv[1][0] != '%') && ((argv[1][0] < '0') || (argv[1][0] > '9'))) {
+        printf("%s: argument must be a PID or %%jobid\n", argv[0]);
+        fflush(stdout);
+        return;
+    }
+
+    else if (argv[1][0] == '%') {
+        currentjob = getjobjid(jobs, (pid_t)atoi(argv[1] + 1));
+        if (currentjob  == NULL) {
+            printf("No such job\n");
+            fflush(stdout);
+            return;
+        }
+    }
+
+    else {
+        currentjob = getjobpid(jobs, atoi(argv[1]));
+        if (currentjob == NULL) {
+            printf("No such process\n");
+            fflush(stdout);
+            return;
+        }
     }
     if (strcmp(argv[0], "bg") == 0){
         currentjob->state = BG;
@@ -419,10 +444,7 @@ void do_bgfg(char **argv)
         kill(-(currentjob->pid), SIGCONT);
     }
     else {
-        printf("fuckyou [%d]\n", currentjob->pid);
-        fflush(stdout);
         currentjob->state = FG;
-        kill(-(currentjob->pid), SIGCONT);
         waitfg(currentjob->pid);
     }
     return;
@@ -443,14 +465,10 @@ void waitfg(pid_t pid)
     sigdelset(&emptyset, SIGTSTP);
 
     sigprocmask(SIG_BLOCK, &childset, NULL);
-    printf("fg suspend before\n");
-    fflush(stdout);
-    printsigset(&emptyset);
-    fflush(stdout);
+    kill(-(pid), SIGCONT);
     sigsuspend(&emptyset);
-    printf("fg suspend\n");
-    fflush(stdout);
-    fflush(stdout);
+
+    sigsuspend(&emptyset);
     sigprocmask(SIG_SETMASK, &prev, NULL);
     return;
 }
@@ -468,17 +486,37 @@ void waitfg(pid_t pid)
  */
 void sigchld_handler(int sig) 
 {
+#ifdef DEBUG
+    printf("sigchld handle call\n");
+    fflush(stdout);
+#endif
     int olderrno = errno, status;
     pid_t pid;
 
     while ((pid = waitpid(-1, &status, WNOHANG | WUNTRACED)) > 0){
         sigprocmask(SIG_BLOCK, &mask, NULL);
 
-        if (WIFSTOPPED(status));
-        else {
+        if (WIFSTOPPED(status)) {
+            printf("by stoped\n");
+            fflush(stdout);
+        }
+        else if(WIFSIGNALED(status))    {
+            printf("使得进程终止的信号编号： %d\n",WTERMSIG(status));
+            fflush(stdout);
+        }
+        else if(WIFEXITED(status)){
+            printf("退出值为 %d\n", WEXITSTATUS(status));
+            fflush(stdout);
             deletejob(jobs, pid);
         }
-        // printf("childhandle pid: %d\n", pid);
+        else if (WIFCONTINUED(status)) {
+            printf("continued\n");
+            fflush(stdout);
+        }
+#ifdef DEBUG
+        printf("childhandle pid: %d\n", pid);
+        fflush(stdout);
+#endif
         sigprocmask(SIG_SETMASK, &prev, NULL);
     }
     fflush(stdout);
@@ -493,10 +531,15 @@ void sigchld_handler(int sig)
  */
 void sigint_handler(int sig) 
 {
+#ifdef DEBUG
+    printf("sigint handle call\n");
     fflush(stdout);
+#endif
     sigprocmask(SIG_BLOCK, &mask, NULL);
     pid_t pid = fgpid(jobs);
     sigprocmask(SIG_SETMASK, &prev, NULL);
+    printf("nowfgpid: %d\n", pid);
+    fflush(stdout);
 
     if (pid) {
         kill(-pid, SIGINT);
@@ -516,9 +559,10 @@ void sigint_handler(int sig)
  */
 void sigtstp_handler(int sig) 
 {
+#ifdef DEBUG
     printf("sigstophandle\n");
     fflush(stdout);
-    // listjobs(jobs);
+#endif
     sigprocmask(SIG_BLOCK, &mask, NULL);
     pid_t pid = fgpid(jobs);
     struct job_t* job = getjobpid(jobs, pid);
@@ -527,6 +571,7 @@ void sigtstp_handler(int sig)
         fflush(stdout);
         kill(-pid, SIGTSTP);
         printf("Job [%d] (%d) stoped by signal %d\n", pid2jid(pid), pid, SIGTSTP);
+        fflush(stdout);
     }
     sigprocmask(SIG_SETMASK, &prev, NULL);
     fflush(stdout);
