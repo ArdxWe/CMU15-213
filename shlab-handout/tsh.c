@@ -4,6 +4,7 @@
  * ardxwe@gmail.com
  */
 
+#include <fcntl.h>
 #include <stdio.h>
 #include <ctype.h>
 #include <errno.h>
@@ -99,6 +100,8 @@ handler_t *Signal(int signum, handler_t *handler);
 /* just for debug*/
 void printsigset(const sigset_t*);
 
+/* ioredirection */
+void ioredirection(char**);
 
 
 /*
@@ -147,6 +150,12 @@ int main(int argc, char **argv)
 
     /* Execute the shell's read/eval loop */
     while (1) {
+        if (freopen("/dev/tty", "r", stdin) == NULL) {
+            unix_error("io redirection error.");
+        }
+        if (freopen("/dev/tty", "w", stdout) == NULL) {
+            unix_error("io redirection error.");
+        }
 
         /* Read command line */
         if (emit_prompt) {
@@ -190,8 +199,9 @@ void eval(char *cmdline)
     pid_t pid;
     char* argv[MAXARGS];
     runbg = parseline(cmdline, argv);
+
+    ioredirection(argv);
     sigemptyset(&mask);
-    // sigfillset(&mask);
 
     sigaddset(&mask, SIGCHLD);
     sigaddset(&mask, SIGINT);
@@ -842,6 +852,32 @@ void sigquit_handler(int sig)
 {
     printf("Terminating after receipt of SIGQUIT signal\n");
     exit(1);
+}
+
+/* do ioredirection */
+void ioredirection(char** argv) {
+    int endcmd = 0x7FFFFFFF;
+    for (int i = 0; argv[i] != NULL; i++) {
+        if (strcmp(argv[i], "<") == 0) {
+            if(freopen(argv[i+1], "r", stdin) == NULL) {
+                return unix_error("io redirection error.\n");
+            }
+            if(endcmd > i) {
+                endcmd = i;
+            }
+        }
+        else if (strcmp(argv[i], ">") == 0) {
+            if (freopen(argv[i+1],"a",stdout) == NULL) {
+                return unix_error("io redirection error.\n");
+            }
+            if (endcmd > i) {
+                endcmd = i;
+            }
+        }
+    }
+    if(endcmd != 0x7FFFFFFF) {
+        argv[endcmd] = NULL;
+    }
 }
 
 /* print sig set */
