@@ -57,6 +57,7 @@ struct job_t {              /* The job struct */
 
 struct job_t jobs[MAXJOBS]; /* The job list */
 
+bool isredirect;
 sigset_t mask, prev;        /* signal */
 bool runbg;                 /* runbg or not runbg */
 volatile pid_t prevpid;     /* prev job pid */
@@ -112,6 +113,7 @@ int main(int argc, char **argv)
     char c;
     char cmdline[MAXLINE];
     int emit_prompt = 1; /* emit prompt (default) */
+    isredirect = false;
 
     /* Redirect stderr to stdout (so that driver will get mask output
      * on the pipe connected to stdout) */
@@ -150,11 +152,14 @@ int main(int argc, char **argv)
 
     /* Execute the shell's read/eval loop */
     while (1) {
-        if (freopen("/dev/tty", "r", stdin) == NULL) {
-            unix_error("io redirection error.");
-        }
-        if (freopen("/dev/tty", "w", stdout) == NULL) {
-            unix_error("io redirection error.");
+        if (isredirect) {
+            if (freopen("/dev/tty", "r", stdin) == NULL) {
+                unix_error("io redirection error.");
+            }
+            if (freopen("/dev/tty", "w", stdout) == NULL) {
+                unix_error("io redirection error.");
+            }
+            isredirect = false;
         }
 
         /* Read command line */
@@ -859,6 +864,7 @@ void ioredirection(char** argv) {
     int endcmd = 0x7FFFFFFF;
     for (int i = 0; argv[i] != NULL; i++) {
         if (strcmp(argv[i], "<") == 0) {
+            isredirect = true;
             if(freopen(argv[i+1], "r", stdin) == NULL) {
                 return unix_error("io redirection error.\n");
             }
@@ -867,6 +873,7 @@ void ioredirection(char** argv) {
             }
         }
         else if (strcmp(argv[i], ">") == 0) {
+            isredirect = true;
             if (freopen(argv[i+1],"a",stdout) == NULL) {
                 return unix_error("io redirection error.\n");
             }
