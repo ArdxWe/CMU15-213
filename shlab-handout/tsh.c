@@ -258,7 +258,7 @@ void eval(char *cmdline)
         exit(0);
     }
     else {
-        /* child process */
+        /* father process */
         prevpid = pid;
 
 #if DEBUG
