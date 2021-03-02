@@ -8,14 +8,14 @@ Read [CSAPP](https://item.jd.com/12155718.html) before doing the labs and listen
 
 ## all labs
 
-| lab name         | finished?  | article                                                                     |
-| :--------------: | :--------: | :-------------------------------------------------------------------------: |
-| data lab         | finished   |                                                                             |
-| bomb lab         | finished   | [bomb lab](https://ardxwe.github.io/2020/09/20/CS15-213labs-bomb-lab/)      |
-| attack lab       | finished   | [attack lab](https://ardxwe.github.io/2020/09/25/CS15-213labs-attack-lab/)  |
-| architecture lab | unfinished |                                                                             |
-| cache lab        | finished   | [cache lab](https://ardxwe.github.io/2020/10/10/CS15-213labs-cache-lab/)    |
-| shell lab        | finished   |                                                                             |
-| malloc lab       | unfinished |                                                                             |
-| proxy lab        | unfinished |                                                                             |
+| lab name         | finished?  | article                                                                             |
+| :--------------: | :--------: | :---------------------------------------------------------------------------------: |
+| data lab         | yes        |                                                                                     |
+| bomb lab         | yes        | [bomb lab](https://ardxwe.github.io/2020/09/20/CS15-213labs-bomb-lab/)              |
+| attack lab       | yes        | [attack lab](https://ardxwe.github.io/2020/09/25/CS15-213labs-attack-lab/)          |
+| architecture lab |            |                                                                                     |
+| cache lab        | yes        | [cache lab](https://ardxwe.github.io/2020/10/10/CS15-213labs-cache-lab/)            |
+| shell lab        | yes        | [shell lab](https://ardxwe.github.io/2020/10/27/CS15-213labs-shell-lab(%E4%B8%8A)/) |
+| malloc lab       |            |                                                                                     |
+| proxy lab        |            |                                                                                     |
 
